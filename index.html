@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Forger</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app" data-state="title">
+    <div id="frame">
+      <!-- Title screen / play area. Everything inside #camera moves with the camera. -->
+      <div id="windup">
+        <div id="shake">
+          <div id="camera">
+            <img class="scene" src="assets/title-screen.jpg" alt="" draggable="false">
+            <div id="blade-heat"></div>
+            <div id="target"><span></span><span></span></div>
+            <div id="impact"></div>
+            <button id="title" type="button" aria-label="Forger: click to start">
+              <img class="crop" src="assets/title-screen.jpg" alt="" draggable="false">
+              <canvas id="title-cold"></canvas>
+              <canvas id="title-hot"></canvas>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Forging table -->
+      <section id="forge" aria-label="Forging table">
+        <img class="scene" src="assets/forge-table.jpg" alt="" draggable="false">
+        <img class="scene glow" src="assets/forge-table.jpg" alt="" draggable="false">
+        <div class="haze"></div>
+        <div class="vignette"></div>
+      </section>
+    </div>
+
+    <canvas id="fx"></canvas>
+    <div id="flash"></div>
+    <div id="heat-wash"></div>
+
+    <p id="hint">Click the title to begin</p>
+    <div id="strike-ui">
+      <p>Strike the blade!</p>
+      <div class="pips"></div>
+    </div>
+  </div>
+  <script src="cutout.js"></script>
+  <script src="sketchfont.js"></script>
+  <script src="game.js"></script>
+  <script src="forge-game.js"></script>
+  <script src="vs.js"></script>
+  <script src="hammer.js"></script>
+</body>
+</html>

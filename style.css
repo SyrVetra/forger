@@ -1,0 +1,589 @@
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #140d08;
+  font-family: "Trebuchet MS", "Arial Black", system-ui, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#app { position: fixed; inset: 0; }
+
+/* The art is 2000x1390; fit it to the window without cropping. */
+#frame {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(100vw, calc(100dvh * 2000 / 1390));
+  aspect-ratio: 2000 / 1390;
+  transform: translate(-50%, -50%);
+  overflow: hidden;
+  background: #fff;
+}
+
+#windup, #shake, #camera { position: absolute; inset: 0; }
+#windup { transform-origin: 44% 47%; }
+#camera { transform-origin: 0 0; will-change: transform; }
+
+.scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+
+/* ---------- Title ---------- */
+#title {
+  position: absolute;
+  padding: 0;
+  border: 0;
+  margin: 0;
+  background: none;
+  cursor: pointer;
+  overflow: visible;
+  transition: transform .25s cubic-bezier(.3, 1.6, .5, 1), filter .3s;
+  outline: none;
+}
+#title .crop {
+  position: absolute;
+  height: auto;
+  max-width: none;
+  pointer-events: none;
+}
+#title canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+  pointer-events: none;
+}
+#title.ready .crop { display: none; }
+#title.ready canvas { display: block; }
+#title-hot { opacity: 0; transition: opacity .4s; }
+
+#title.hot { transform: scale(1.045); animation: rattle .14s steps(2) infinite; }
+#title.hot #title-hot { opacity: var(--heat, 1); }
+#title.ready.hot { filter: drop-shadow(0 0 .6vw rgba(255, 120, 20, .85)) drop-shadow(0 0 1.6vw rgba(255, 80, 0, .45)); }
+#title:not(.ready).hot { filter: sepia(1) saturate(4) hue-rotate(-15deg) brightness(1.05); }
+#title:focus-visible { filter: drop-shadow(0 0 .5vw rgba(255, 120, 20, .9)); }
+
+@keyframes rattle {
+  0%   { translate: 0 0;      rotate: 0deg; }
+  50%  { translate: .08% -.3%; rotate: -.25deg; }
+  100% { translate: -.08% .2%; rotate: .2deg; }
+}
+
+#app:not([data-state="title"]) #title { pointer-events: none; animation: none; }
+
+/* ---------- Play area ---------- */
+#impact, #target, #blade-heat {
+  position: absolute;
+  translate: -50% -50%;
+  pointer-events: none;
+}
+
+#blade-heat {
+  width: 26%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 140, 30, 1) 0%, rgba(255, 90, 10, .75) 30%, rgba(255, 60, 0, 0) 68%);
+  mix-blend-mode: multiply;
+  opacity: var(--heat, 0);
+  transition: opacity .5s;
+}
+
+#target {
+  width: 7%;
+  aspect-ratio: 1;
+  opacity: 0;
+  transition: opacity .4s;
+}
+#target span {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: .25vw solid rgba(255, 110, 10, .9);
+  animation: ping 1.4s ease-out infinite;
+}
+#target span + span { animation-delay: .7s; }
+@keyframes ping {
+  from { transform: scale(.4); opacity: 1; }
+  to   { transform: scale(1.6); opacity: 0; }
+}
+#app[data-state="play"] #target { opacity: 1; }
+#app[data-state="play"] { cursor: crosshair; }
+
+/* ---------- Overlays ---------- */
+#fx {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+#flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at var(--fx, 50%) var(--fy, 50%), rgba(255, 255, 240, 1) 0%, rgba(255, 200, 90, .7) 12%, rgba(255, 140, 40, 0) 40%);
+}
+
+#heat-wash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at 50% 50%, #fffbe8 0%, #ffd27a 22%, #ff8a1f 52%, #8a2c05 82%, #2a0f03 100%);
+}
+#app[data-state="zooming"] #heat-wash {
+  opacity: 1;
+  transition: opacity .75s ease-in .55s;
+}
+#app[data-state="forge"] #heat-wash {
+  opacity: 0;
+  transition: opacity 1.6s ease-out;
+}
+
+#hint, #strike-ui {
+  position: absolute;
+  left: 50%;
+  bottom: 4vh;
+  translate: -50% 0;
+  margin: 0;
+  padding: .5em 1.2em;
+  border: 3px solid #111;
+  border-radius: 999px;
+  background: #2b1b10;
+  color: #111;
+  font-weight: 900;
+  font-size: clamp(18px, 2.6vw, 34px);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity .4s;
+  box-shadow: 4px 4px 0 #111;
+}
+#hint { animation: bob 1.6s ease-in-out infinite; }
+#app:not([data-state="title"]) #hint { opacity: 0; }
+
+@keyframes bob { 50% { transform: translateY(-6px); } }
+
+#strike-ui { opacity: 0; display: flex; align-items: center; gap: .9em; }
+#strike-ui p { margin: 0; }
+#app[data-state="play"] #strike-ui,
+#app[data-state="striking"] #strike-ui { opacity: 1; }
+.pips { display: flex; gap: .35em; }
+.pips i {
+  width: .8em;
+  height: .8em;
+  border: 3px solid #111;
+  border-radius: 50%;
+  background: #fff;
+  transition: background .2s, box-shadow .2s;
+}
+.pips i.on { background: #ff7a12; box-shadow: 0 0 10px #ff8a1f; }
+
+/* ---------- Forge ---------- */
+#forge {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(1.2);
+  background: #3b230f;
+}
+#app[data-state="forge"] #forge {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+  transition: opacity .9s ease, transform 2.4s cubic-bezier(.15, .7, .2, 1);
+}
+#app[data-state="forge"] #windup { visibility: hidden; }
+
+/* A brightened copy of the art, kept to the top where the light shafts are,
+   screened on top so only the light glows. JS flickers their opacity. */
+#forge .glow {
+  mix-blend-mode: screen;
+  filter: brightness(1.25) saturate(1.6) blur(2px);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 30%, transparent 70%);
+          mask-image: linear-gradient(to bottom, #000 0%, #000 30%, transparent 70%);
+  opacity: .3;
+  will-change: opacity;
+}
+#forge .haze {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background:
+    radial-gradient(ellipse 55% 50% at 52% 12%, rgba(255, 160, 70, .5), rgba(255, 120, 40, .16) 50%, transparent 78%),
+    linear-gradient(to bottom, rgba(255, 140, 50, .12), transparent 55%);
+  opacity: .5;
+  will-change: opacity;
+}
+#forge .vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 75% 70% at 50% 40%, transparent 55%, rgba(12, 6, 2, .6) 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #title.hot { animation: none; }
+  #hint { animation: none; }
+}
+
+/* ---------- Hammer cursor ---------- */
+html.hammer-cursor, html.hammer-cursor * { cursor: none !important; }
+
+#hammer, #hammer-aim {
+  position: fixed;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity .15s;
+}
+#hammer.on, #hammer-aim.on { opacity: 1; }
+/* transform-origin (end of the handle) is set by hammer.js */
+#hammer img {
+  display: block;
+  max-width: none;
+  transform: rotate(28deg);           /* raised; 0deg is the moment of impact */
+  filter: drop-shadow(3px 5px 3px rgba(0, 0, 0, .35));
+}
+#hammer.swing img { animation: hammer-swing .3s cubic-bezier(.5, 0, .4, 1); }
+@keyframes hammer-swing {
+  0%   { transform: rotate(28deg); }
+  30%  { transform: rotate(-4deg); }
+  45%  { transform: rotate(1deg); }
+  100% { transform: rotate(28deg); }
+}
+
+/* ---------- Sketch font (sketchfont.js) ---------- */
+.sk { display: inline; }
+.sk-w { display: inline-block; white-space: nowrap; vertical-align: middle; }
+.sk-g {
+  display: inline-block;
+  height: .9em;
+  margin: 0 -.025em;
+  vertical-align: top;
+  background-repeat: no-repeat;
+}
+.sk-x {
+  display: inline-block;
+  height: .9em;
+  line-height: .9em;
+  vertical-align: top;
+  font-weight: 900;
+  color: #fffaf0;
+  -webkit-text-stroke: .07em #111;
+  paint-order: stroke fill;
+}
+
+#hammer-aim {
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: #ff9a2e;
+  box-shadow: 0 0 0 2px #111, 0 0 8px 2px rgba(255, 140, 30, .8);
+}
+
+/* ---------- Matching game on the forge table ---------- */
+#table {
+  position: absolute;
+  inset: 0;
+  container-type: size;
+  pointer-events: none;
+  color: #111;
+}
+#pieces { position: absolute; inset: 0; }
+
+#anvil-glow {
+  position: absolute;
+  left: 50%;
+  top: 56%;
+  width: 26%;
+  height: 80%;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 150, 60, .16), rgba(255, 120, 40, .05) 60%, transparent);
+  mix-blend-mode: screen;
+  transition: background .4s, opacity .4s;
+}
+#table.forged-glow #anvil-glow {
+  background: radial-gradient(closest-side, rgba(255, 200, 110, .55), rgba(255, 130, 40, .2) 60%, transparent);
+}
+
+.piece {
+  position: absolute;
+  height: auto;
+  max-width: none;
+  z-index: 2;
+  filter: drop-shadow(.25cqw .45cqw .3cqw rgba(0, 0, 0, .55));
+  transition: filter .15s;
+  user-select: none;
+}
+.piece.hover {
+  filter: drop-shadow(0 0 .35cqw #ffc46b) drop-shadow(0 0 1.1cqw rgba(255, 120, 20, .85));
+}
+.piece.placed.slot-blade, .piece.placed.slot-grip { z-index: 3; }
+.piece.placed.slot-guard { z-index: 4; }
+.piece.flying { z-index: 10; }
+.piece[data-sword="lightsaber"][data-slot="blade"]:not(.hover):not(.cold) {
+  filter: drop-shadow(0 0 .45cqw rgba(120, 210, 255, .95)) drop-shadow(.25cqw .45cqw .3cqw rgba(0, 0, 0, .5));
+}
+#table.forged-glow .piece.placed {
+  filter: drop-shadow(0 0 .5cqw #ffd27a) drop-shadow(0 0 1.6cqw rgba(255, 120, 20, .9));
+}
+.piece.cold { filter: grayscale(1) brightness(.55); transition: filter .8s; }
+
+.piece.drop { animation: piece-drop .45s cubic-bezier(.3, 1.5, .5, 1) both; }
+@keyframes piece-drop {
+  from { opacity: 0; translate: 0 -8cqh; scale: 1.25; }
+  to   { opacity: 1; translate: 0 0; scale: 1; }
+}
+.piece.reveal { z-index: 5; animation: piece-reveal .6s ease-out both; }
+.piece.reveal.slot-guard { z-index: 6; }
+@keyframes piece-reveal {
+  from { opacity: 0; scale: 1.15; filter: brightness(3) drop-shadow(0 0 2cqw #ff9a2e); }
+  to   { opacity: 1; scale: 1; }
+}
+.piece.vanish { animation: piece-vanish .45s ease-in forwards; }
+@keyframes piece-vanish { to { opacity: 0; scale: .85; } }
+
+/* HUD */
+#hud {
+  position: absolute;
+  inset: 0;                 /* full height so the reveal list can center on the table */
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.4cqw 1.8cqw;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  opacity: 0;
+  transition: opacity .5s;
+}
+#table.in-game #hud { opacity: 1; }
+
+.pill, #hud-left > span, #order .part, #hud-timer, #banner {
+  background: #2b1b10;
+  border: .22cqw solid #111;
+  box-shadow: .3cqw .3cqw 0 #111;
+}
+#hud-left { display: flex; flex-direction: column; gap: .5cqw; font-size: 1.7cqw; }
+#hud-left > span { padding: .35em .9em; border-radius: 999px; width: max-content; }
+
+#hud-timer {
+  min-width: 9cqw;
+  padding: .4cqw .9cqw .7cqw;
+  border-radius: 1cqw;
+  text-align: center;
+  font-size: 3.2cqw;
+  line-height: 1.1;
+}
+#timer-bar { height: .7cqw; margin-top: .3cqw; border: .15cqw solid #111; border-radius: 999px; overflow: hidden; background: #fff; }
+#timer-bar i { display: block; height: 100%; background: linear-gradient(90deg, #ff5a12, #ffb347); }
+#hud-timer.low { color: #d4260b; animation: timer-pulse .5s ease-in-out infinite alternate; }
+#hud-timer.low #timer-bar i { background: #e0300f; }
+@keyframes timer-pulse { to { scale: 1.08; } }
+
+#order {
+  position: absolute;
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .5cqw .6cqw;
+  width: max-content;
+  max-width: 62cqw;
+  /* layout differs per phase, so it fades in rather than sliding */
+}
+/* Reveal: the full parts list stacked to the left of the assembled sword */
+#order.center {
+  top: 50%;
+  left: 5%;
+  translate: 0 -50%;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1cqw;
+  max-width: 38cqw;
+  font-size: 2.2cqw;
+  animation: order-in-a .5s ease-out both;
+}
+#order.center b { display: none; }
+/* Play: compact list at the top center */
+#order.top { top: 1.6%; font-size: 1.75cqw; animation: order-in-b .5s ease-out both; }
+@keyframes order-in-a { from { opacity: 0; translate: -2cqw -50%; } }
+@keyframes order-in-b { from { opacity: 0; translate: -50% -1cqh; } }
+#order b { color: #f6ecd7; font-size: 1.3em; text-shadow: 0 0 .3cqw #000; }
+#order .part {
+  padding: .35em .8em;
+  border-radius: .6em;
+  transition: background .3s, color .3s;
+}
+#order .part.done { background: #ff8a24; text-decoration: line-through 0.15em; }
+#order .part.done::after { content: " ✓"; }
+
+#banner {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  translate: -50% -50%;
+  padding: .5em 1.2em;
+  border-radius: 1.2cqw;
+  font-size: 4cqw;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  text-align: center;
+  opacity: 0;
+  scale: .7;
+  transition: opacity .25s, scale .35s cubic-bezier(.3, 1.6, .5, 1);
+  z-index: 20;
+}
+#banner.show { opacity: 1; scale: 1; }
+#banner.small { top: 14%; font-size: 2.4cqw; }
+#banner small, #banner em { display: block; font-size: .38em; letter-spacing: .1em; margin-top: .5em; font-style: normal; }
+#banner em { color: #c2410c; animation: bob 1.4s ease-in-out infinite; }
+
+.float {
+  position: absolute;
+  translate: -50% -50%;
+  font-weight: 900;
+  font-size: 2.2cqw;
+  z-index: 30;
+  animation: float-up .9s ease-out forwards;
+  text-shadow: 0 0 .3cqw #000, .15cqw .15cqw 0 #000;
+}
+.float.bad { color: #ff4a24; }
+@keyframes float-up { to { translate: -50% -260%; opacity: 0; } }
+
+/* ---------- Mode menu & Vs. ---------- */
+#menu {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.3cqw;
+  text-align: center;
+  animation: menu-in .4s ease-out both;
+}
+#menu.show { display: flex; }
+@keyframes menu-in { from { opacity: 0; translate: 0 2cqh; } }
+
+#menu h2 {
+  margin: 0 0 .6cqw;
+  color: #f6ecd7;
+  font-size: 3.4cqw;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  text-shadow: .25cqw .25cqw 0 #111, 0 0 1.5cqw rgba(255, 140, 40, .6);
+}
+#menu button, #banner .btns button {
+  pointer-events: auto;
+  font: inherit;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: #111;
+  background: #2b1b10;
+  border: .22cqw solid #111;
+  border-radius: 1cqw;
+  box-shadow: .35cqw .35cqw 0 #111;
+  transition: background .12s, translate .08s, box-shadow .08s;
+}
+#menu > button {
+  width: 32cqw;
+  padding: 1cqw 1.6cqw;
+  font-size: 2.5cqw;
+}
+#menu button small {
+  display: block;
+  margin-top: .3em;
+  font-size: .5em;
+  letter-spacing: .1em;
+  opacity: .7;
+}
+#menu button:hover, #banner .btns button:hover { background: #7a3d12; translate: -.1cqw -.1cqw; box-shadow: .45cqw .45cqw 0 #111; }
+#menu button:active, #banner .btns button:active { translate: .2cqw .2cqw; box-shadow: .1cqw .1cqw 0 #111; }
+#menu > button.ghost { width: auto; font-size: 1.4cqw; padding: .6cqw 1.6cqw; }
+
+#menu .note {
+  margin: 0;
+  max-width: 44cqw;
+  color: #f6ecd7;
+  font-weight: 700;
+  font-size: 1.9cqw;
+  line-height: 1.5;
+  text-shadow: 0 0 .4cqw #000, .12cqw .12cqw 0 #000;
+}
+#menu .note.err { color: #ffb199; min-height: 1.5em; }
+#menu .dots::after { content: ''; animation: dots 1.2s steps(4) infinite; }
+@keyframes dots { 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+
+#menu .code {
+  display: flex;
+  gap: 1cqw;
+  font-size: 7cqw;
+  font-weight: 900;
+  letter-spacing: .25em;
+  padding: .6cqw 1.4cqw .6cqw 2.6cqw;
+  background: #2b1b10;
+  border: .3cqw solid #111;
+  border-radius: 1.2cqw;
+  box-shadow: .45cqw .45cqw 0 #111, 0 0 3cqw rgba(255, 140, 40, .45);
+}
+#menu .code.entry { letter-spacing: 0; padding: .8cqw 1.4cqw; font-size: 4.6cqw; }
+#menu .code.entry > span {
+  width: 6cqw;
+  height: 7cqw;
+  display: grid;
+  place-items: center;
+  border-bottom: .35cqw solid #111;
+}
+#menu .keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 6.4cqw);
+  gap: .7cqw;
+}
+#menu .keypad button { height: 4.6cqw; font-size: 2.1cqw; padding: 0; border-radius: .8cqw; }
+#menu .keypad button.fn { background: #4a2e18; }
+
+#banner .btns { display: flex; justify-content: center; gap: 1cqw; margin-top: 1.2cqw; }
+#banner .btns button { font-size: 1.9cqw; padding: .6cqw 1.6cqw; }
+#banner.count { font-size: 9cqw; padding: .1em .6em; }
+#banner.count small { font-size: .16em; }
+
+/* Vs. HUD: your score in forge orange, rival's plain */
+#table.vs #hud-round { background: #ff8a24; }
+
+/* GET FORGING card between the reveal and the pieces dropping */
+#banner.go {
+  top: 50%;
+  font-size: 7cqw;
+  white-space: nowrap;
+  padding: .25em .8em;
+  box-shadow: .5cqw .5cqw 0 #111, 0 0 4cqw rgba(255, 130, 30, .55);
+  animation: go-pulse 1s ease-in-out infinite alternate;
+}
+@keyframes go-pulse { to { scale: 1.05; } }
